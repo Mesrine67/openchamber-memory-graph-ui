@@ -111,6 +111,56 @@ function isJsonContentType(contentType: string | null): boolean {
   return contentType?.split(";", 1)[0]?.trim().toLowerCase() === "application/json";
 }
 
+const PROFILE_API_PATH = /^\/api\/user-profile(?:\/|$)/;
+const PROFILE_SECTIONS = ["preferences", "patterns", "workflows"] as const;
+const PROFILE_VECTOR_FIELDS = ["centroid", "anchor"] as const;
+
+/**
+ * The profile payload carries megabyte embedding vectors that the panel never
+ * renders; the host drops any response over GUEST_REQUEST_RESPONSE_MAX
+ * (256 000 chars), so they must be removed before returning to the panel.
+ */
+export function stripProfileVectors(pathname: string, body: string): string {
+  if (!PROFILE_API_PATH.test(pathname)) {
+    return body;
+  }
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    return body;
+  }
+  if (typeof payload !== "object" || payload === null) {
+    return body;
+  }
+  const data = (payload as { data?: unknown }).data;
+  if (typeof data !== "object" || data === null) {
+    return body;
+  }
+  const profileData = (data as { profileData?: unknown }).profileData;
+  if (typeof profileData !== "object" || profileData === null) {
+    return body;
+  }
+
+  let changed = false;
+  for (const section of PROFILE_SECTIONS) {
+    const items = (profileData as Record<string, unknown>)[section];
+    if (!Array.isArray(items)) continue;
+    for (const item of items) {
+      if (typeof item !== "object" || item === null) continue;
+      const signal = item as Record<string, unknown>;
+      for (const field of PROFILE_VECTOR_FIELDS) {
+        if (field in signal) {
+          delete signal[field];
+          changed = true;
+        }
+      }
+    }
+  }
+  return changed ? JSON.stringify(payload) : body;
+}
+
 export class MemoryProxy implements MemoryRequestProxy {
   private readonly fetchImplementation: FetchImplementation;
   private readonly readToken: () => string;
@@ -160,7 +210,7 @@ export class MemoryProxy implements MemoryRequestProxy {
 
     return {
       status: response.status,
-      body: await response.text(),
+      body: stripProfileVectors(input.pathname, await response.text()),
       contentType: isJsonContentType(response.headers.get("content-type"))
         ? "application/json"
         : undefined,

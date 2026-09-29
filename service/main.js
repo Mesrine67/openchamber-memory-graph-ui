@@ -63,6 +63,49 @@ function isTimeout(error) {
 function isJsonContentType(contentType) {
   return contentType?.split(";", 1)[0]?.trim().toLowerCase() === "application/json";
 }
+var PROFILE_API_PATH = /^\/api\/user-profile(?:\/|$)/;
+var PROFILE_SECTIONS = ["preferences", "patterns", "workflows"];
+var PROFILE_VECTOR_FIELDS = ["centroid", "anchor"];
+function stripProfileVectors(pathname, body) {
+  if (!PROFILE_API_PATH.test(pathname)) {
+    return body;
+  }
+  let payload;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    return body;
+  }
+  if (typeof payload !== "object" || payload === null) {
+    return body;
+  }
+  const data = payload.data;
+  if (typeof data !== "object" || data === null) {
+    return body;
+  }
+  const profileData = data.profileData;
+  if (typeof profileData !== "object" || profileData === null) {
+    return body;
+  }
+  let changed = false;
+  for (const section of PROFILE_SECTIONS) {
+    const items = profileData[section];
+    if (!Array.isArray(items))
+      continue;
+    for (const item of items) {
+      if (typeof item !== "object" || item === null)
+        continue;
+      const signal = item;
+      for (const field of PROFILE_VECTOR_FIELDS) {
+        if (field in signal) {
+          delete signal[field];
+          changed = true;
+        }
+      }
+    }
+  }
+  return changed ? JSON.stringify(payload) : body;
+}
 
 class MemoryProxy {
   fetchImplementation;
@@ -102,7 +145,7 @@ class MemoryProxy {
     }
     return {
       status: response.status,
-      body: await response.text(),
+      body: stripProfileVectors(input.pathname, await response.text()),
       contentType: isJsonContentType(response.headers.get("content-type")) ? "application/json" : undefined
     };
   }

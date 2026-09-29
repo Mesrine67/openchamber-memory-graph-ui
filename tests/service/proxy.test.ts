@@ -3,6 +3,7 @@ import {
   isAllowedUpstreamRequest,
   MemoryProxy,
   ProxyRequestError,
+  stripProfileVectors,
 } from "../../service/proxy";
 
 describe("isAllowedUpstreamRequest", () => {
@@ -142,6 +143,57 @@ test("maps an unavailable upstream to a stable error", async () => {
       "UPSTREAM_UNAVAILABLE",
       "opencode-mem is not reachable on 127.0.0.1:4747",
     ),
+  );
+});
+
+test("strips embedding vectors from profile responses before the host sees them", async () => {
+  const profileBody = JSON.stringify({
+    success: true,
+    data: {
+      exists: true,
+      version: 3,
+      profileData: {
+        preferences: [{ category: "editor", description: "Prefers vim", confidence: 0.9, centroid: [1, 2, 3], anchor: [4, 5] }],
+        patterns: [{ category: "testing", description: "Runs bun test", steps: undefined, centroid: [6] }],
+        workflows: [{ category: "review", description: "Reviews PRs", steps: ["read", "test"], anchor: [7] }],
+      },
+    },
+  });
+  const proxy = new MemoryProxy({
+    fetch: async () =>
+      new Response(profileBody, { headers: { "Content-Type": "application/json" } }),
+    readToken: () => "upstream-test-token",
+  });
+
+  const response = await proxy.request({ method: "GET", pathname: "/api/user-profile" });
+
+  const parsed = JSON.parse(response.body) as {
+    success: boolean;
+    data: { version: number; profileData: Record<string, Array<Record<string, unknown>>> };
+  };
+  expect(parsed.success).toBe(true);
+  expect(parsed.data.version).toBe(3);
+  for (const section of ["preferences", "patterns", "workflows"]) {
+    for (const item of parsed.data.profileData[section] ?? []) {
+      expect("centroid" in item).toBe(false);
+      expect("anchor" in item).toBe(false);
+    }
+  }
+  expect(parsed.data.profileData.patterns[0]?.description).toBe("Runs bun test");
+  expect(parsed.data.profileData.workflows[0]?.steps).toEqual(["read", "test"]);
+});
+
+test("stripProfileVectors leaves other routes, error envelopes, and bad JSON untouched", () => {
+  const vectors = '{"success":true,"data":{"profileData":{"preferences":[{"centroid":[1]}]}}}';
+  expect(stripProfileVectors("/api/memories", vectors)).toBe(vectors);
+  expect(stripProfileVectors("/api/user-profile", '{"success":false,"error":"Unauthorized"}')).toBe(
+    '{"success":false,"error":"Unauthorized"}',
+  );
+  expect(stripProfileVectors("/api/user-profile", "not-json")).toBe("not-json");
+  const noVectors = '{"success":true,"data":{"profileData":{"preferences":[{"confidence":1}]}}}';
+  expect(stripProfileVectors("/api/user-profile", noVectors)).toBe(noVectors);
+  expect(stripProfileVectors("/api/user-profile/refresh", vectors)).toBe(
+    '{"success":true,"data":{"profileData":{"preferences":[{}]}}}',
   );
 });
 
