@@ -213,3 +213,17 @@ export function resolveLocale(locale: string): SupportedLocale {
 export function strings(locale: string): (typeof messages)[SupportedLocale] {
   return messages[resolveLocale(locale)];
 }
+
+export function errorCopy(t: Messages, error: string): { title: string; body: string } {
+  switch (error) {
+    case "NO_SERVICE":
+    case "NOT_GRANTED":
+      return { title: t.serviceNotApprovedTitle, body: t.serviceNotApprovedBody };
+    case "UPSTREAM_UNAUTHORIZED":
+      return { title: t.unauthorizedTitle, body: t.unauthorizedBody };
+    case "UPSTREAM_UNAVAILABLE":
+      return { title: t.unavailableTitle, body: t.unavailableBody };
+    default:
+      return { title: t.failedTitle, body: t.failedBody };
+  }
+}

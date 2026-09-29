@@ -1,9 +1,11 @@
 import type { GuestRequest, GuestRequestResult } from "@openchamber/sdk";
 import type {
   CreateMemoryInput,
+  MemoryItem,
   MemoryPage,
   MemoryStats,
   MemoryTag,
+  PromptItem,
   UpdateMemoryInput,
   UserProfile,
 } from "./types";
@@ -105,6 +107,31 @@ function decode<T>(result: GuestRequestResult): T {
     throw new MemoryApiError("INVALID_RESPONSE", "The service response is missing data");
   }
   return value.data as T;
+}
+
+/**
+ * The host drops any service response whose body exceeds
+ * GUEST_REQUEST_RESPONSE_MAX (256 000 chars), so a single page must stay well
+ * under that. 100 items measured at ~104 000 chars typical / ~180 000 chars
+ * even when the page contains the 100 largest items.
+ */
+export const FETCH_ALL_PAGE_SIZE = 100;
+const FETCH_ALL_MAX_PAGES = 100;
+
+/** Fetch every memory and prompt page by page instead of one oversized page. */
+export async function fetchAllMemories(
+  api: MemoryApi,
+  options: { pageSize?: number; maxPages?: number } = {},
+): Promise<Array<MemoryItem | PromptItem>> {
+  const pageSize = options.pageSize ?? FETCH_ALL_PAGE_SIZE;
+  const maxPages = options.maxPages ?? FETCH_ALL_MAX_PAGES;
+  const items: Array<MemoryItem | PromptItem> = [];
+  for (let page = 1; page <= maxPages; page += 1) {
+    const result = await api.getMemories({ page, pageSize, includePrompts: true });
+    items.push(...result.items);
+    if (result.items.length === 0 || page >= result.totalPages) break;
+  }
+  return items;
 }
 
 function query(values: Record<string, string | number | boolean | undefined>): Record<string, string> | undefined {

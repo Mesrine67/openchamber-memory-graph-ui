@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { GuestRequest } from "@openchamber/sdk";
-import { createMemoryApi, MemoryApiError } from "../../panel/api";
+import { createMemoryApi, fetchAllMemories, FETCH_ALL_PAGE_SIZE, MemoryApiError } from "../../panel/api";
 import memoriesFixture from "../fixtures/api/2026-09-22-memories.json";
 
 function createHost(result: { status: number; body: string }) {
@@ -174,4 +174,57 @@ test("sends explicit mutation requests only", async () => {
     { method: "GET", path: "/memory-api/api/user-profile" },
     { method: "POST", path: "/memory-api/api/user-profile/refresh" },
   ]);
+});
+
+function createPagedHost(total: number) {
+  const requests: GuestRequest[] = [];
+  const host = {
+    async serviceRequest(request: GuestRequest) {
+      requests.push(request);
+      const page = Number(request.query?.page ?? "1");
+      const pageSize = Number(request.query?.pageSize ?? "0");
+      const start = (page - 1) * pageSize;
+      const items = Array.from({ length: Math.max(0, Math.min(pageSize, total - start)) }, (_, index) => ({
+        type: "memory",
+        id: `memory-${start + index}`,
+        content: `Content ${start + index}`,
+        createdAt: "2026-09-22T00:00:00.000Z",
+      }));
+      return {
+        status: 200,
+        body: JSON.stringify({
+          success: true,
+          data: { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) },
+        }),
+      };
+    },
+  };
+  return { requests, host };
+}
+
+test("fetchAllMemories pages through every item with the host-safe page size", async () => {
+  const { host, requests } = createPagedHost(250);
+  const api = createMemoryApi(host);
+
+  const items = await fetchAllMemories(api);
+
+  expect(items).toHaveLength(250);
+  expect(items[0].id).toBe("memory-0");
+  expect(items[249].id).toBe("memory-249");
+  expect(requests).toHaveLength(3);
+  expect(requests.every((request) => request.query?.pageSize === String(FETCH_ALL_PAGE_SIZE))).toBe(true);
+  expect(requests.map((request) => request.query?.page)).toEqual(["1", "2", "3"]);
+});
+
+test("fetchAllMemories stops on an empty result and honors the page cap", async () => {
+  const empty = createPagedHost(0);
+  expect(await fetchAllMemories(createMemoryApi(empty.host))).toEqual([]);
+
+  const capped = createPagedHost(1000);
+  const items = await fetchAllMemories(createMemoryApi(capped.host), {
+    pageSize: 100,
+    maxPages: 2,
+  });
+  expect(items).toHaveLength(200);
+  expect(capped.requests).toHaveLength(2);
 });

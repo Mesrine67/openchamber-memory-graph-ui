@@ -2,7 +2,7 @@ import { connectHost } from "@openchamber/sdk";
 import { applyHostReady, mountBanner, mountButton, mountSpinner, mountTabs } from "@openchamber/sdk/ui";
 import { createMemoryApi, MemoryApiError } from "./api";
 import { mountGraphView } from "./graph-view";
-import { resolveLocale, strings } from "./i18n";
+import { errorCopy, resolveLocale, strings } from "./i18n";
 import { mountMemoryView } from "./memory-view";
 import { mountProfileView } from "./profile-view";
 import { initialState, reduce, type AppAction, type AppSurface, type AppView } from "./state";
@@ -108,19 +108,8 @@ async function load(): Promise<void> {
   }
 }
 
-function errorCopy(error: string, locale: string) {
-  const text = strings(locale);
-  switch (error) {
-    case "NO_SERVICE":
-    case "NOT_GRANTED":
-      return { title: text.serviceNotApprovedTitle, body: text.serviceNotApprovedBody };
-    case "UPSTREAM_UNAUTHORIZED":
-      return { title: text.unauthorizedTitle, body: text.unauthorizedBody };
-    case "UPSTREAM_UNAVAILABLE":
-      return { title: text.unavailableTitle, body: text.unavailableBody };
-    default:
-      return { title: text.failedTitle, body: text.failedBody };
-  }
+function errorCopyFor(error: string, locale: string) {
+  return errorCopy(strings(locale), error);
 }
 
 function render(): void {
@@ -142,7 +131,7 @@ function render(): void {
     ],
   });
   if (state.error) {
-    const copy = errorCopy(state.error, state.locale);
+    const copy = errorCopyFor(state.error, state.locale);
     banner.update({ title: copy.title, body: copy.body, action: { label: text.retry, onClick: () => void load() } });
   }
   spinnerRoot.hidden = !state.loading;

@@ -1,6 +1,6 @@
 import { mountBanner, mountButton, mountEmpty, mountSpinner, type ButtonHandle } from "@openchamber/sdk/ui";
 import { MemoryApiError, type MemoryApi } from "./api";
-import type { Messages } from "./i18n";
+import { errorCopy, type Messages } from "./i18n";
 import type { AppState } from "./state";
 import type { ProfileSignal, ProfileWorkflow, UserProfile } from "./types";
 
@@ -44,20 +44,6 @@ export function formatConfidence(value: number | undefined): string | null {
 export function formatAlphaBeta(alpha: number | undefined, beta: number | undefined): string | null {
   if (alpha === undefined || beta === undefined) return null;
   return `${alpha}/${beta}`;
-}
-
-function copyForError(code: string, t: Messages): { title: string; body: string } {
-  switch (code) {
-    case "NO_SERVICE":
-    case "NOT_GRANTED":
-      return { title: t.serviceNotApprovedTitle, body: t.serviceNotApprovedBody };
-    case "UPSTREAM_UNAUTHORIZED":
-      return { title: t.unauthorizedTitle, body: t.unauthorizedBody };
-    case "UPSTREAM_UNAVAILABLE":
-      return { title: t.unavailableTitle, body: t.unavailableBody };
-    default:
-      return { title: t.failedTitle, body: t.failedBody };
-  }
 }
 
 export function mountProfileView(root: Element, deps: ProfileViewDeps): ProfileViewHandle {
@@ -131,7 +117,7 @@ export function mountProfileView(root: Element, deps: ProfileViewDeps): ProfileV
     } catch (caught) {
       error = caught instanceof MemoryApiError ? caught : null;
       status = "error";
-      deps.toast("error", copyForError(error?.code ?? "UPSTREAM_ERROR", text()).title);
+      deps.toast("error", errorCopy(text(), error?.code ?? "UPSTREAM_ERROR").title);
     }
     paint();
   }
@@ -220,7 +206,7 @@ export function mountProfileView(root: Element, deps: ProfileViewDeps): ProfileV
     });
     spinner.update({ label: t.loading, size: "sm" });
     if (error) {
-      const copy = copyForError(error.code, t);
+      const copy = errorCopy(t, error.code);
       errorBanner.update({
         title: copy.title,
         body: copy.body,

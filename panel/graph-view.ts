@@ -1,10 +1,10 @@
 import { DataSet, Network, type Edge as VisEdge, type Node as VisNode } from "vis-network/standalone";
 import { mountBanner, mountButton, mountEmpty, mountSearchField, mountSpinner, type SearchFieldHandle } from "@openchamber/sdk/ui";
-import type { MemoryApi } from "./api";
+import { fetchAllMemories, MemoryApiError, type MemoryApi } from "./api";
 import { openDialog, type DialogHandle } from "./dialog";
 import { buildDetailContent } from "./detail";
 import { buildGraphModel, filterGraph, type GraphFilter, type GraphModel, type GraphTheme } from "./graph-model";
-import type { Messages } from "./i18n";
+import { errorCopy, type Messages } from "./i18n";
 import type { AppState } from "./state";
 
 export type GraphViewDeps = {
@@ -17,7 +17,6 @@ export type GraphViewHandle = {
   dispose(): void;
 };
 
-const GRAPH_PAGE_SIZE = 2000;
 const STALE_MS = 30_000;
 const REVEAL_FALLBACK_MS = 20_000;
 const STABILIZATION_ITERATIONS = 300;
@@ -49,6 +48,7 @@ export function mountGraphView(root: Element, deps: GraphViewDeps): GraphViewHan
   let themeKey = "";
   let detailDialog: DialogHandle | null = null;
   let revealed = false;
+  let errorCode = "";
 
   const text = (): Messages => deps.strings(latest?.locale ?? "en");
 
@@ -287,12 +287,13 @@ export function mountGraphView(root: Element, deps: GraphViewDeps): GraphViewHan
     status = "loading";
     paint();
     try {
-      const page = await deps.api.getMemories({ page: 1, pageSize: GRAPH_PAGE_SIZE, includePrompts: true });
-      fullModel = buildGraphModel(page.items, readTheme());
+      const items = await fetchAllMemories(deps.api);
+      fullModel = buildGraphModel(items, readTheme());
       fetchedAt = Date.now();
       status = "ready";
       createNetwork();
-    } catch {
+    } catch (error) {
+      errorCode = error instanceof MemoryApiError ? error.code : "SERVICE_FAILED";
       status = "error";
     }
     paint();
@@ -311,7 +312,8 @@ export function mountGraphView(root: Element, deps: GraphViewDeps): GraphViewHan
     guidanceRoot.hidden = latest?.surface !== "panel";
     spinner.update({ label: t.loading, size: "sm" });
     if (status === "error") {
-      errorBanner.update({ title: t.failedTitle, body: t.failedBody, action: { label: t.retry, onClick: () => void fetchGraph(true) } });
+      const copy = errorCopy(t, errorCode);
+      errorBanner.update({ title: copy.title, body: copy.body, action: { label: t.retry, onClick: () => void fetchGraph(true) } });
     }
     empty.update({ title: t.graphEmptyTitle, body: t.graphEmptyBody });
     const hasNodes = status === "ready" && Boolean(fullModel && fullModel.nodes.length > 0);
