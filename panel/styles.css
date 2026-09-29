@@ -257,8 +257,8 @@ button:focus-visible,
 }
 
 .memory-graph {
-  display: grid;
-  grid-template-rows: auto auto minmax(240px, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 10px;
   block-size: 100%;
   min-block-size: 0;
@@ -283,8 +283,10 @@ button:focus-visible,
 
 .memory-graph__canvas {
   position: relative;
-  block-size: 100%;
+  flex: 1 1 auto;
+  block-size: auto;
   min-block-size: 240px;
+  overflow: hidden;
   border: 1px solid var(--oc-border);
   border-radius: var(--oc-radius, 8px);
   background: var(--oc-muted-surface, var(--oc-bg));
@@ -292,9 +294,18 @@ button:focus-visible,
   transition: opacity 180ms ease-out;
 }
 
+/* vis-network injects a `div.vis-network` frame with `position:relative` as an
+   INLINE style and sizes its in-flow canvas from `clientHeight * pixelRatio`.
+   If the frame height is content-driven, that intrinsic size feeds back through
+   vis-network's ResizeObserver (autoResize) and the host grows without bound.
+   Pin the frame to the host so it can never contribute to layout. */
+.memory-graph__canvas > .vis-network {
+  position: absolute !important;
+  inset: 0 !important;
+}
+
 .memory-graph__canvas.is-ready { opacity: 1; }
 
-.memory-app[data-surface="panel"] .memory-graph { grid-template-rows: auto auto minmax(180px, 1fr); }
 .memory-app[data-surface="panel"] .memory-graph__canvas { min-block-size: 180px; }
 
 .memory-graph__related { display: grid; gap: 8px; }
