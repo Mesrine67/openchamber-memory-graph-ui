@@ -2,7 +2,12 @@
   background: var(--oc-bg);
   color: var(--oc-fg);
   font-family: var(--oc-font, system-ui, sans-serif);
+  font-size: 13px;
+  line-height: 1.45;
 }
+
+:root[data-oc-theme="dark"] { color-scheme: dark; }
+:root[data-oc-theme="light"] { color-scheme: light; }
 
 * { box-sizing: border-box; }
 

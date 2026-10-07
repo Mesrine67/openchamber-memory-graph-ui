@@ -1,11 +1,15 @@
 import { expect, test } from "bun:test";
 import { errorCopy, resolveLocale, strings } from "../../panel/i18n";
 
-test("selects Chinese for zh locales and English otherwise", () => {
+test("selects a supported locale and falls back to English", () => {
   expect(resolveLocale("zh-CN")).toBe("zh");
   expect(resolveLocale("zh-TW")).toBe("zh");
+  expect(resolveLocale("fr-FR")).toBe("fr");
   expect(resolveLocale("en-US")).toBe("en");
-  expect(resolveLocale("fr-FR")).toBe("en");
+  expect(resolveLocale("de-DE")).toBe("en");
+  expect(strings("fr").failedTitle).toBe("Échec de la requête mémoire");
+  expect(strings("fr").emptyListTitle).toBe("Aucune mémoire pour le moment");
+  expect(Object.keys(strings("fr")).sort()).toEqual(Object.keys(strings("en")).sort());
 });
 
 test("maps error codes to contract-specific copy and falls back to generic failure", () => {

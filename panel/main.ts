@@ -114,7 +114,7 @@ function errorCopyFor(error: string, locale: string) {
 
 function render(): void {
   const text = strings(state.locale);
-  document.documentElement.lang = state.locale === "zh" ? "zh-CN" : "en";
+  document.documentElement.lang = state.locale === "zh" ? "zh-CN" : state.locale;
   root.dataset.surface = state.surface;
   title.textContent = text.memory;
   tabsRoot.setAttribute("aria-label", text.viewsLabel);
