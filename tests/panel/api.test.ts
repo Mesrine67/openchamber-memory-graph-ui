@@ -79,6 +79,14 @@ test("maps service, upstream, and invalid-response failures", async () => {
       };
     },
   });
+  const tokenUnavailable = createMemoryApi({
+    async serviceRequest() {
+      return {
+        status: 502,
+        body: '{"code":"AUTH_TOKEN_UNAVAILABLE","message":"opencode-mem authentication token is unavailable"}',
+      };
+    },
+  });
 
   await expect(noService.getStats()).rejects.toEqual(
     new MemoryApiError("NO_SERVICE", "Not approved"),
@@ -103,6 +111,9 @@ test("maps service, upstream, and invalid-response failures", async () => {
   );
   await expect(unavailable.getStats()).rejects.toEqual(
     new MemoryApiError("UPSTREAM_UNAVAILABLE", "opencode-mem is not reachable on 127.0.0.1:4747"),
+  );
+  await expect(tokenUnavailable.getStats()).rejects.toEqual(
+    new MemoryApiError("UPSTREAM_AUTH_UNAVAILABLE", "opencode-mem authentication token is unavailable"),
   );
 });
 

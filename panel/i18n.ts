@@ -17,7 +17,9 @@ const messages = {
     serviceNotApprovedTitle: "Local service permission is required",
     serviceNotApprovedBody: "Approve the extension's local-service permission in Settings > Extensions, then retry.",
     unavailableTitle: "opencode-mem is unavailable",
-    unavailableBody: "Keep OpenCode running with webServerEnabled, then retry.",
+    unavailableBody: "No memory API answered on 127.0.0.1:4747. Start OpenCode with opencode-mem and webServerEnabled on the same host as this OpenChamber extension service, then retry.",
+    authTokenUnavailableTitle: "opencode-mem token is not available on this host",
+    authTokenUnavailableBody: "The extension service cannot find ~/.opencode-mem/.auth-token in its host environment. Windows OpenChamber cannot read the token stored inside WSL automatically. Run this extension on the same host as opencode-mem, then retry.",
     unauthorizedTitle: "opencode-mem authorization failed",
     unauthorizedBody: "The local service could not authenticate with opencode-mem. Restart OpenCode and retry.",
     failedTitle: "Memory request failed",
@@ -117,7 +119,9 @@ const messages = {
     serviceNotApprovedTitle: "需要本地服务权限",
     serviceNotApprovedBody: "请在“设置 > 扩展”中批准此扩展的本地服务权限，然后重试。",
     unavailableTitle: "opencode-mem 不可用",
-    unavailableBody: "请保持 OpenCode 运行且启用 webServerEnabled，然后重试。",
+    unavailableBody: "127.0.0.1:4747 上没有可用的记忆 API。请在此 OpenChamber 扩展服务所在的主机上启动启用了 webServerEnabled 的 OpenCode/opencode-mem，然后重试。",
+    authTokenUnavailableTitle: "此主机上没有 opencode-mem 令牌",
+    authTokenUnavailableBody: "扩展服务找不到其主机环境中的 ~/.opencode-mem/.auth-token。Windows 版 OpenChamber 不会自动读取 WSL 中的令牌。请在与 opencode-mem 相同的主机上运行此扩展，然后重试。",
     unauthorizedTitle: "opencode-mem 鉴权失败",
     unauthorizedBody: "本地服务无法向 opencode-mem 完成鉴权。请重启 OpenCode 后重试。",
     failedTitle: "记忆请求失败",
@@ -221,6 +225,8 @@ export function errorCopy(t: Messages, error: string): { title: string; body: st
       return { title: t.serviceNotApprovedTitle, body: t.serviceNotApprovedBody };
     case "UPSTREAM_UNAUTHORIZED":
       return { title: t.unauthorizedTitle, body: t.unauthorizedBody };
+    case "UPSTREAM_AUTH_UNAVAILABLE":
+      return { title: t.authTokenUnavailableTitle, body: t.authTokenUnavailableBody };
     case "UPSTREAM_UNAVAILABLE":
       return { title: t.unavailableTitle, body: t.unavailableBody };
     default:

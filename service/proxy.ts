@@ -36,7 +36,7 @@ export type MemoryProxyOptions = {
 
 export class ProxyRequestError extends Error {
   constructor(
-    readonly code: "INVALID_REQUEST" | "UPSTREAM_TIMEOUT" | "UPSTREAM_UNAVAILABLE",
+    readonly code: "INVALID_REQUEST" | "UPSTREAM_TIMEOUT" | "UPSTREAM_UNAVAILABLE" | "AUTH_TOKEN_UNAVAILABLE",
     message: string,
   ) {
     super(message);
@@ -86,7 +86,7 @@ function readDedicatedToken(): string {
   }
 
   throw new ProxyRequestError(
-    "UPSTREAM_UNAVAILABLE",
+    "AUTH_TOKEN_UNAVAILABLE",
     "opencode-mem authentication token is unavailable",
   );
 }

@@ -45,7 +45,7 @@ function readDedicatedToken() {
       return token;
     }
   } catch {}
-  throw new ProxyRequestError("UPSTREAM_UNAVAILABLE", "opencode-mem authentication token is unavailable");
+  throw new ProxyRequestError("AUTH_TOKEN_UNAVAILABLE", "opencode-mem authentication token is unavailable");
 }
 function validateRequestBody(body) {
   if (body === undefined) {

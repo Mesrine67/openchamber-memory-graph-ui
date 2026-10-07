@@ -17,10 +17,19 @@ user profile.
 
 ## Prerequisites
 
-- OpenChamber ≥ 1.24.0 (desktop or web)
+- OpenChamber ≥ 2.0.0 (desktop or web)
 - OpenCode running with the `opencode-mem` plugin, `webServerEnabled: true`
   (default port `4747`)
 - The extension's **local-service** permission (requested once at install)
+
+The extension service and `opencode-mem` must run in the same host environment:
+the service reads `~/.opencode-mem/.auth-token` and connects to
+`127.0.0.1:4747` from the OpenChamber server that hosts the extension. Windows
+and WSL have separate homes, tokens, and loopback interfaces. A Windows
+OpenChamber instance does not automatically read the token from WSL. To use a
+WSL-only memory store, host the OpenChamber extension service in that WSL
+environment; otherwise run `opencode-mem` in the Windows environment used by
+OpenChamber.
 
 ## Install
 
@@ -28,7 +37,7 @@ user profile.
 2. Paste one of these into *Folder, ZIP, or URL* and choose **Add**:
 
    ```text
-   https://github.com/yulimfish/openchamber-memory-graph-ui.git
+   https://github.com/Mesrine67/openchamber-memory-graph-ui.git
    ```
 
    or a local checkout for development:
@@ -100,8 +109,9 @@ TypeScript sources.
 | State you see | Meaning | Fix |
 |---|---|---|
 | Local service permission is required | OpenChamber has not approved the bundled service | Settings → Extensions → review/approve the local-service permission, then **Retry** |
-| opencode-mem is unavailable | Nothing answers on `127.0.0.1:4747` | Keep OpenCode running with `webServerEnabled: true`, then **Retry** |
-| opencode-mem authorization failed | The dedicated token file is missing/rejected | Restart OpenCode so `opencode-mem` rewrites `~/.opencode-mem/.auth-token`, then **Retry** |
+| opencode-mem is unavailable | Nothing answers on `127.0.0.1:4747` from the OpenChamber extension host | Start OpenCode with `opencode-mem` and `webServerEnabled: true` in that host environment, then **Retry** |
+| opencode-mem token is not available on this host | The extension host cannot read its own `~/.opencode-mem/.auth-token` | Run the extension on the same host as `opencode-mem`; Windows and WSL token files are separate |
+| opencode-mem authorization failed | The host token was read but the API rejected it | Restart the matching OpenCode instance so `opencode-mem` refreshes its token, then **Retry** |
 | Memory request failed | Unexpected upstream/service response | Check the OpenCode logs and **Retry** once |
 | Empty list | No memories match the current search/filter | Clear the search or add a memory |
 
@@ -111,6 +121,15 @@ The executed automated gate and the pending interactive checklist live in
 [`docs/2026-09-22-manual-verification.md`](docs/2026-09-22-manual-verification.md).
 The HTTP contract with the local upstream is documented in
 [`docs/2026-09-22-opencode-mem-http-contract.md`](docs/2026-09-22-opencode-mem-http-contract.md).
+
+## Releases and updates
+
+Update `version` in `package.json`, add a `CHANGELOG.md` entry, and run
+`bun run check` before pushing. The `v*` tag workflow verifies that the tag
+matches the package version and creates a GitHub Release. Git-installed
+extensions track the selected branch by default; OpenChamber checks them when
+you open **Settings → Extensions** (at most hourly) or immediately when you
+choose **Check for updates**. A pinned install follows the tag in its Git URL.
 
 ## License
 

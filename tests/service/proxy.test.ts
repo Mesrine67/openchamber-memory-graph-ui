@@ -91,6 +91,24 @@ test("rejects malformed mutation bodies before calling upstream", async () => {
   );
 });
 
+test("reports a missing host token separately from an unreachable upstream", async () => {
+  let fetchCalled = false;
+  const proxy = new MemoryProxy({
+    fetch: async () => {
+      fetchCalled = true;
+      return new Response();
+    },
+    readToken: () => {
+      throw new ProxyRequestError("AUTH_TOKEN_UNAVAILABLE", "opencode-mem authentication token is unavailable");
+    },
+  });
+
+  await expect(proxy.request({ method: "GET", pathname: "/api/stats" })).rejects.toEqual(
+    new ProxyRequestError("AUTH_TOKEN_UNAVAILABLE", "opencode-mem authentication token is unavailable"),
+  );
+  expect(fetchCalled).toBe(false);
+});
+
 test("maps an upstream timeout to a stable error", async () => {
   const proxy = new MemoryProxy({
     fetch: async () => {

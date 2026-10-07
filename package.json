@@ -1,11 +1,11 @@
 {
   "name": "openchamber-memory-graph-ui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "OpenChamber panel for the local opencode-mem service.",
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "@openchamber/sdk": "1.24.2",
+    "@openchamber/sdk": "2.1.1",
     "vis-network": "10.1.2"
   },
   "devDependencies": {
@@ -23,7 +23,7 @@
   "openchamber": {
     "apiVersion": 1,
     "engines": {
-      "openchamber": ">=1.24.0"
+      "openchamber": ">=2.0.0"
     },
     "contributes": {
       "panel": {

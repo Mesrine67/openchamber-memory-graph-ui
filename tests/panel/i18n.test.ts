@@ -26,6 +26,10 @@ test("maps error codes to contract-specific copy and falls back to generic failu
     title: zh.unavailableTitle,
     body: zh.unavailableBody,
   });
+  expect(errorCopy(zh, "UPSTREAM_AUTH_UNAVAILABLE")).toEqual({
+    title: zh.authTokenUnavailableTitle,
+    body: zh.authTokenUnavailableBody,
+  });
   expect(errorCopy(zh, "SERVICE_FAILED")).toEqual({
     title: zh.failedTitle,
     body: zh.failedBody,

@@ -19,6 +19,7 @@ export type MemoryApiErrorCode =
   | "SERVICE_FAILED"
   | "UPSTREAM_UNAUTHORIZED"
   | "UPSTREAM_UNAVAILABLE"
+  | "UPSTREAM_AUTH_UNAVAILABLE"
   | "UPSTREAM_ERROR"
   | "INVALID_RESPONSE";
 
@@ -94,6 +95,14 @@ function decode<T>(result: GuestRequestResult): T {
       value.code === "UPSTREAM_UNAVAILABLE"
     ) {
       throw new MemoryApiError("UPSTREAM_UNAVAILABLE", message);
+    }
+    if (
+      typeof value === "object" &&
+      value !== null &&
+      "code" in value &&
+      value.code === "AUTH_TOKEN_UNAVAILABLE"
+    ) {
+      throw new MemoryApiError("UPSTREAM_AUTH_UNAVAILABLE", message);
     }
     throw new MemoryApiError(result.status === 401 ? "UPSTREAM_UNAUTHORIZED" : "UPSTREAM_ERROR", message);
   }
