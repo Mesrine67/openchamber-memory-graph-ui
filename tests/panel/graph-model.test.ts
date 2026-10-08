@@ -59,6 +59,36 @@ test("ignores links whose counterpart is missing", () => {
   expect(model.edges).toHaveLength(0);
 });
 
+test("adds directed merge edges only to known source memories", () => {
+  const items = [
+    memory("source-a"),
+    memory("source-b"),
+    memory("merged", {
+      metadata: { mergedFrom: ["source-b", "missing", "source-a", "source-a", 42, ""] },
+    }),
+  ];
+
+  const edges = buildGraphModel(items, theme).edges.filter((edge) => edge.kind === "merged-from");
+
+  expect(edges).toHaveLength(2);
+  expect(edges.map(({ from, to }) => [from, to])).toEqual([
+    ["memory:merged", "memory:source-a"],
+    ["memory:merged", "memory:source-b"],
+  ]);
+});
+
+test("caps merge lineage and ignores malformed source identifiers", () => {
+  const sourceIds = Array.from({ length: 40 }, (_, index) => `source-${index}`);
+  const items = [
+    ...sourceIds.map((id) => memory(id)),
+    memory("merged", { metadata: { mergedFrom: [...sourceIds, "bad\nid", " ".repeat(257)] } }),
+  ];
+
+  const mergeEdges = buildGraphModel(items, theme).edges.filter((edge) => edge.kind === "merged-from");
+
+  expect(mergeEdges).toHaveLength(32);
+});
+
 test("adds shared-tag edges only for tags with two through eight members", () => {
   const twoItems = [memory("a", { tags: ["shared"] }), memory("b", { tags: ["shared"] })];
   expect(buildGraphModel(twoItems, theme).edges.filter((edge) => edge.kind === "shared-tag")).toHaveLength(1);

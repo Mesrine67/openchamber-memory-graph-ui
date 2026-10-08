@@ -47,6 +47,13 @@ Representative sanitized responses are in `tests/fixtures/api/`. They retain
 field names, optionality, and value types while replacing all personal content,
 identifiers, repository URLs, project paths, email addresses, and timestamps.
 
+The current Yulimfish fork also returns each memory's `metadata` object. When a
+memory is created by the supported merge operation, `metadata.mergedFrom`
+contains the source memory IDs. The graph can show those explicit merge edges
+when both the merged record and its source records are present in the API
+result. This API does not expose Supermemory's typed `updates`, `extends`, or
+`derives` relations; the extension must not infer or label those relations.
+
 ## Verification Evidence
 
 - The listener is the active OpenCode process with the `opencode-mem` plugin

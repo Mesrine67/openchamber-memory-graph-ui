@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2 - 2026-10-08
+
+- Add explicit merged-memory lineage to the graph using `opencode-mem`'s `metadata.mergedFrom` field.
+- Distinguish merge edges and inferred shared-tag links, including localized relationship labels.
+- Document which relationship types the local memory API does and does not expose.
+
 ## 0.2.1 - 2026-10-08
 
 - Add complete French UI and error-message translations alongside English and Chinese.

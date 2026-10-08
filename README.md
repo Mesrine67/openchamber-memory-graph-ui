@@ -3,8 +3,8 @@
 An [OpenChamber](https://openchamber.dev) extension that brings your local
 [`opencode-mem`](https://github.com/yulimfish) memory store into OpenChamber as a
 rail panel and a full-screen page: browse, search, edit, and delete memories,
-explore a stable interactive graph of memories and prompts, and read your grouped
-user profile.
+explore a stable interactive graph of memories, prompts, and supported merge
+history, and read your grouped user profile.
 
 - **Panel + page**: compact rail panel for quick lookups; full-screen page
   (OpenChamber → *Extension pages*) as the primary graph workspace.
@@ -14,6 +14,11 @@ user profile.
 ## Works with opencode-mem
 
 [`opencode-mem`](https://github.com/yulimfish/opencode-mem) is the memory-system core: it owns storage, capture, retrieval/injection, and its standalone full-management WebUI. This extension is its OpenChamber companion, giving you an in-context place to browse, search, manage memories, and explore the graph. It uses the same memory data through the authenticated local API; it does not create a separate store or replace the plugin's core behavior. You can use either interface on its own or both together.
+
+The graph uses prompt links and merge provenance returned by `opencode-mem`.
+Shared-tag links are shown as inferred associations. The API does not currently
+provide Supermemory-style `updates`, `extends`, or `derives` relationships, so
+the extension does not invent those semantics.
 
 ## Prerequisites
 

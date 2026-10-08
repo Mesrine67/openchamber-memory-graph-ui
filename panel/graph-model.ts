@@ -20,7 +20,7 @@ export type GraphEdge = {
   id: string;
   from: string;
   to: string;
-  kind: "link" | "shared-tag";
+  kind: "link" | "shared-tag" | "merged-from";
   color: { color: string; highlight: string };
 };
 
@@ -36,6 +36,7 @@ export type GraphFilter = {
 };
 
 const LABEL_LIMIT = 48;
+const MAX_MERGED_FROM_LINKS = 32;
 
 function shortLabel(content: string): string {
   const compact = content.replace(/\s+/g, " ").trim();
@@ -49,6 +50,17 @@ function nodeId(item: MemoryItem | PromptItem): string {
 
 function pairKey(from: string, to: string): string {
   return from < to ? `${from}|${to}` : `${to}|${from}`;
+}
+
+function mergedFromIds(item: MemoryItem): string[] {
+  const value = item.metadata?.mergedFrom;
+  if (!Array.isArray(value)) return [];
+
+  return [...new Set(value.filter((id): id is string =>
+    typeof id === "string" && id.length > 0 && id.length <= 256 && id.trim() === id && !/[\u0000-\u001f\u007f]/.test(id),
+  ))]
+    .sort()
+    .slice(0, MAX_MERGED_FROM_LINKS);
 }
 
 export function buildGraphModel(items: Array<MemoryItem | PromptItem>, theme: GraphTheme): GraphModel {
@@ -84,6 +96,16 @@ export function buildGraphModel(items: Array<MemoryItem | PromptItem>, theme: Gr
     } else if (item.type === "prompt" && item.linkedMemoryId) {
       const target = `memory:${item.linkedMemoryId}`;
       if (known.has(target)) addEdge(nodeId(item), target, "link");
+    }
+  }
+
+  // opencode-mem preserves explicit merge provenance in metadata.mergedFrom.
+  // Keep the edge directed from the merged memory to each source memory.
+  for (const item of ordered) {
+    if (item.type !== "memory") continue;
+    for (const sourceId of mergedFromIds(item)) {
+      const target = `memory:${sourceId}`;
+      if (known.has(target)) addEdge(nodeId(item), target, "merged-from");
     }
   }
 

@@ -46,6 +46,7 @@ export function mountGraphView(root: Element, deps: GraphViewDeps): GraphViewHan
   let edgeData: DataSet<VisEdge> | null = null;
   let revealTimer: ReturnType<typeof setTimeout> | null = null;
   let themeKey = "";
+  let graphLocale = "";
   let detailDialog: DialogHandle | null = null;
   let revealed = false;
   let errorCode = "";
@@ -150,6 +151,20 @@ export function mountGraphView(root: Element, deps: GraphViewDeps): GraphViewHan
     canvasHost.classList.remove("is-ready");
   }
 
+  function edgeTitle(kind: GraphModel["edges"][number]["kind"]): string {
+    const t = text();
+    if (kind === "merged-from") return t.graphMergedFrom;
+    if (kind === "shared-tag") return t.graphSharedTag;
+    return t.graphLinked;
+  }
+
+  function refreshLocalizedEdgeTitles(): void {
+    const locale = latest?.locale ?? "en";
+    if (!fullModel || !edgeData || graphLocale === locale) return;
+    graphLocale = locale;
+    edgeData.update(fullModel.edges.map((edge) => ({ id: edge.id, title: edgeTitle(edge.kind) })));
+  }
+
   function freezeAndReveal(): void {
     clearRevealTimer();
     if (!network || revealed) return;
@@ -163,17 +178,24 @@ export function mountGraphView(root: Element, deps: GraphViewDeps): GraphViewHan
     if (!fullModel || fullModel.nodes.length === 0) return;
     const theme = readTheme();
     themeKey = theme.mode;
+    graphLocale = latest?.locale ?? "en";
 
     const visNodes: VisNode[] = fullModel.nodes.map((node) => ({
       id: node.id,
       label: node.label,
       color: { ...node.color, background: node.kind === "memory" ? theme.memory : theme.prompt, border: node.kind === "memory" ? theme.memory : theme.prompt, font: theme.text },
     }));
+    const t = text();
     const visEdges: VisEdge[] = fullModel.edges.map((edge) => ({
       id: edge.id,
       from: edge.from,
       to: edge.to,
       color: { color: theme.edge, highlight: theme.edge, inherit: false },
+      ...(edge.kind === "merged-from"
+        ? { arrows: { to: { enabled: true, scaleFactor: 0.6 } }, title: t.graphMergedFrom }
+        : edge.kind === "shared-tag"
+          ? { dashes: true, title: t.graphSharedTag }
+          : { title: t.graphLinked }),
     }));
     nodeData = new DataSet(visNodes);
     edgeData = new DataSet(visEdges);
@@ -232,14 +254,27 @@ export function mountGraphView(root: Element, deps: GraphViewDeps): GraphViewHan
     network.setOptions({ nodes: { font: { size: 12, color: theme.text } } });
   }
 
-  function neighborsOf(nodeId: string): GraphModel["nodes"] {
+  function neighborsOf(nodeId: string): Array<{ node: GraphModel["nodes"][number]; relation: string }> {
     if (!fullModel) return [];
-    const neighborIds = new Set<string>();
+    const neighborIds = new Map<string, string>();
     for (const edge of fullModel.edges) {
-      if (edge.from === nodeId) neighborIds.add(edge.to);
-      if (edge.to === nodeId) neighborIds.add(edge.from);
+      if (edge.from === nodeId) {
+        neighborIds.set(edge.to, edge.kind === "merged-from" ? text().graphMergedFrom : relationFor(edge.kind));
+      }
+      if (edge.to === nodeId) {
+        neighborIds.set(edge.from, edge.kind === "merged-from" ? text().graphMergedInto : relationFor(edge.kind));
+      }
     }
-    return fullModel.nodes.filter((node) => neighborIds.has(node.id));
+    return fullModel.nodes.flatMap((node) => {
+      const relation = neighborIds.get(node.id);
+      return relation ? [{ node, relation }] : [];
+    });
+  }
+
+  function relationFor(kind: GraphModel["edges"][number]["kind"]): string {
+    const t = text();
+    if (kind === "shared-tag") return t.graphSharedTag;
+    return t.graphLinked;
   }
 
   function openNodeDetail(nodeId: string): void {
@@ -259,11 +294,11 @@ export function mountGraphView(root: Element, deps: GraphViewDeps): GraphViewHan
         const button = document.createElement("button");
         button.type = "button";
         button.className = "memory-graph__related-button";
-        button.textContent = neighbor.label;
+        button.textContent = `${neighbor.relation}: ${neighbor.node.label}`;
         button.addEventListener("click", () => {
-          network?.selectNodes([neighbor.id]);
-          network?.focus(neighbor.id, { scale: 1.1 });
-          openNodeDetail(neighbor.id);
+          network?.selectNodes([neighbor.node.id]);
+          network?.focus(neighbor.node.id, { scale: 1.1 });
+          openNodeDetail(neighbor.node.id);
         });
         list.append(button);
       }
@@ -333,6 +368,7 @@ export function mountGraphView(root: Element, deps: GraphViewDeps): GraphViewHan
     if (network && fullModel && nextThemeKey && nextThemeKey !== themeKey) {
       recolor();
     }
+    refreshLocalizedEdgeTitles();
     paint();
     if (status === "idle" || status === "ready") void fetchGraph(false);
   }
